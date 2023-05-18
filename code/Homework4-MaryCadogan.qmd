@@ -1,26 +1,97 @@
 ---
 title: "Homework-4"
+author: "Mary Cadogan"
 format: pdf
 editor: visual
 ---
 
-## Quarto
+1.  Mathematical: H0: β~1~ = 0
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+    HA: β~1~ ≠ 0
 
-## Running Code
+    Biological: H0: Fish length does not predict fish weight for trout perch.
 
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+    HA: Fish length does predict fish weight for trout perch.
 
-```{r}
-1 + 1
-```
-
-You can add options to executable code like this
+2.  
 
 ```{r}
-#| echo: false
-2 * 2
+library(tidyverse)
+library(here)
+library(naniar)
+library(flextable)
+library(performance)
+library(broom)
+library(car)
+library(ggeffects)
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+```{r}
+fish_data <- read_csv(here("code", "ntl6_v12.csv"))
+```
+
+```{r}
+troutperch_summary <- fish_data %>% 
+  filter(spname == "TROUTPERCH") %>% 
+  group_by(length, weight) 
+```
+
+```{r}
+gg_miss_var(troutperch_summary)
+```
+
+```{r}
+ggplot(data = troutperch_summary, aes(x = length, y = weight)) + 
+  geom_point()
+```
+
+4\.
+
+```{r}
+troutperch_object <- lm(weight ~ length, data = troutperch_summary)
+
+par(mfrow =c(2,2))
+plot(troutperch_object)
+```
+
+5.  
+
+6\.
+
+```{r}
+trout_summarytable <- summary(troutperch_object)
+
+trout_summarytable
+```
+
+```{r}
+trout_anova <-anova(troutperch_object)
+
+trout_anova_table <- tidy(trout_anova) %>% 
+  mutate(across(sumsq:meansq, ~ round(.x, digits = 4))) %>%
+  mutate(statistic = round(statistic, digits = 1)) %>% 
+  mutate(p.value = case_when(p.value < 0.001 ~ "< 0.001")) %>%
+  flextable() %>% 
+  set_header_labels(df = "Degrees of Freedom", 
+                    sumsq = "Sum of squares",
+                    meansq = "Mean squares",
+                    statistic = "F-statistic",
+                    p.value = "p-value")
+
+trout_anova_table
+```
+
+```{r}
+trout_anova_table <- tidy(trout_anova) %>% 
+  mutate(across(sumsq:meansq, ~ round(.x, digits = 4))) %>%
+  mutate(statistic = round(statistic, digits = 1)) %>% 
+  mutate(p.value = case_when(p.value < 0.001 ~ "< 0.001")) %>%
+  flextable() %>% 
+  set_header_labels(df = "Degrees of Freedom", 
+                    sumsq = "Sum of squares",
+                    meansq = "Mean squares",
+                    statistic = "F-statistic",
+                    p.value = "p-value")
+
+trout_anova_table
+```
