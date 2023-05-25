@@ -13,8 +13,6 @@ editor: visual
 
     HA: Fish length does predict fish weight for trout perch.
 
-2.  
-
 ```{r}
 library(tidyverse)
 library(here)
@@ -30,14 +28,18 @@ library(ggeffects)
 fish_data <- read_csv(here("code", "ntl6_v12.csv"))
 ```
 
+2.  
+
 ```{r}
 troutperch_summary <- fish_data %>% 
   filter(spname == "TROUTPERCH") %>% 
-  group_by(length, weight) 
+  group_by("length", "weight") 
 ```
 
 ```{r}
-gg_miss_var(troutperch_summary)
+gg_miss_var(troutperch_summary) %>% 
+  labs(plot.title = "The missing data from the weight column will impact the hypotheses due to weight being the dependent variable we are testing against the independent variable of fish lengths.")
+  
 ```
 
 ```{r}
@@ -54,7 +56,7 @@ par(mfrow =c(2,2))
 plot(troutperch_object)
 ```
 
-5.  
+5.  After looking at
 
 6\.
 
@@ -94,4 +96,11 @@ trout_anova_table <- tidy(trout_anova) %>%
                     p.value = "p-value")
 
 trout_anova_table
+```
+
+8.  The ANOVA table relates to the information from the summary() object
+9.  
+
+```{r}
+plot_predictions
 ```
