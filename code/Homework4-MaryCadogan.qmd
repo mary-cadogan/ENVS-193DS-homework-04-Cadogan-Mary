@@ -14,6 +14,7 @@ editor: visual
     HA: Fish length does predict fish weight for trout perch.
 
 ```{r}
+#load in packages
 library(tidyverse)
 library(here)
 library(naniar)
@@ -25,38 +26,62 @@ library(ggeffects)
 ```
 
 ```{r}
+#read in the data and create new object
 fish_data <- read_csv(here("code", "ntl6_v12.csv"))
 ```
 
 2.  
 
 ```{r}
+#filtered data set by troutperch, and then selected for the 2 variables we are looking at: length and weight
 troutperch_summary <- fish_data %>% 
   filter(spname == "TROUTPERCH") %>% 
-  group_by("length", "weight") 
+  select("length", "weight") 
 ```
 
 ```{r}
+#see if any weight or length data is missing using gg_miss_var
 gg_miss_var(troutperch_summary) %>% 
-  labs(plot.title = "The missing data from the weight column will impact the hypotheses due to weight being the dependent variable we are testing against the independent variable of fish lengths.")
+  labs(caption = "The missing data from the weight column will impact the hypotheses due to weight being the dependent variable we are testing. 200 missing variables is a substantial amount of data that cannot be utilized to determine a linear relationship. There was no missing data for fish lengths. ")
   
 ```
 
 ```{r}
+#get a general sense of what the data looks like using a point graph
 ggplot(data = troutperch_summary, aes(x = length, y = weight)) + 
-  geom_point()
+  geom_point() 
+```
+
+3\.
+
+```{r}
+#run linear model test with length affecting weight from filtered data set 
+troutperch_object <- lm(weight ~ length, data = troutperch_summary)
+summary(troutperch_object)
 ```
 
 4\.
 
 ```{r}
-troutperch_object <- lm(weight ~ length, data = troutperch_summary)
-
+#show results of linear modeling tests visually in 4 different plots in a grid
 par(mfrow =c(2,2))
 plot(troutperch_object)
+
+#check other assumptions
+check_heteroscedasticity(troutperch_object)
+
+check_normality(troutperch_object)
 ```
 
-5.  After looking at
+5.  Residuals vs Fitted: Most of the data for the linear modeling test is distributed evenly around a relatively horizontal line but with 3 identified outliers. Therefore, normality is maintained but not homoscedasticy.
+
+Normal Q-Q: The data points are in a fairly straight line, except for the 3 outliers at the end. Therefore, the data could be considered not normally distributed and potentially heteroscedastic due to the outliers.
+
+Scale-Location: The Scale-Location is similar to the results from Residuals vs Fitted, with a similar horizontal line besides the outliers. Therefore normality is maintained but not homoscedasticy.
+
+Residuals vs Leverage: This plot uses Cook's distance to determine if any outliers have a significant influence on the data. This plot shows that 226 might have a large influence on the data.
+
+I decided to keep all data points because I did not think they would heavily impact the slope of the line and the data points may be plausible instead of a "mistake".
 
 6\.
 
@@ -65,6 +90,8 @@ trout_summarytable <- summary(troutperch_object)
 
 trout_summarytable
 ```
+
+7\.
 
 ```{r}
 trout_anova <-anova(troutperch_object)
@@ -83,24 +110,34 @@ trout_anova_table <- tidy(trout_anova) %>%
 trout_anova_table
 ```
 
-```{r}
-trout_anova_table <- tidy(trout_anova) %>% 
-  mutate(across(sumsq:meansq, ~ round(.x, digits = 4))) %>%
-  mutate(statistic = round(statistic, digits = 1)) %>% 
-  mutate(p.value = case_when(p.value < 0.001 ~ "< 0.001")) %>%
-  flextable() %>% 
-  set_header_labels(df = "Degrees of Freedom", 
-                    sumsq = "Sum of squares",
-                    meansq = "Mean squares",
-                    statistic = "F-statistic",
-                    p.value = "p-value")
-
-trout_anova_table
-```
-
-8.  The ANOVA table relates to the information from the summary() object
-9.  
+8.  The ANOVA table relates to the information from the summary() object by showing the same (or very similar) F statistic, the p value, and the degrees of freedom.
+9.  The results indicate that the data rejects the null hypothesis, that troutperch lengths do not predict weight, in favor of the alternative hypothesis, that troutperch lengths do predict weight. Testing a total of 489
 
 ```{r}
-plot_predictions
+#use ggpredict to make a predictions plot
+predictions <- ggpredict(troutperch_object, terms = "length")
+predictions
+
+#plotting predictions from the ggpredict, with length on x and weight on y
+predict_plot <- ggplot(data = troutperch_object, 
+                       aes(x = length, y = weight)) +
+  #plotting the troutperch data lone
+  geom_point() +
+  #plotting predictions of linear model, changing aesthetics of plot line
+  geom_line(data = predictions, 
+              aes(x = x, y = predicted), 
+              color = "blue", linewidth = 0.75) +
+  #plotting the confidence interval from the gg predict function (95%)
+  geom_ribbon(data = predictions, 
+              aes(x = x, y = predicted, ymin = conf.low, ymax = conf.high), 
+              alpha = 0.2) +
+
+  #theme and meaningful labels, expand on caption
+  theme_bw() +
+  labs(x = "Length",
+       y = "Weight", title = "Does Troutperch Length Predict Weight?", caption = "Linear model predictions determined using lm() test. Data source: North Temperate Lakes LTER: Fish Lengths and Weights (1981)") +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.caption = element_text(hjust = 0.5))
+
+predict_plot
 ```
